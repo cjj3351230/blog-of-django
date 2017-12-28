@@ -1,0 +1,92 @@
+<!-- 进入该视图顺序：网址  ->  urls.py进行匹配  ->  views.py找到index.html模板文件  ->  index.html中点击文章链接  -> 根据函数返回pk值相应的url值  ->  根据url和pk找到views.py中post函数  ->  返回detail.html模板文件并将相应pk值的文章内容传入  -> 在该模板文件中显示文章内容 -->            
+            {% extends 'base.html' %}
+            {% block main %}
+                <article class="post post-1">
+                    <header class="entry-header">
+                        <h1 class="entry-title">{{ post.title }}</h1>
+                        <!-- 由于已经通过index.html文件链接post.get_absolute_url返回对应pk值的url，然后通过该url从urls.py中名为'detail'的匹配方式匹配views.py中的detail函数，detail函数根据接收的pk值得到对应的post（文章）内容并赋值给post变量，最终返回detail.html模板文件并将post变量传递至这里，因此这里的post不需要引入替换标签来说明post为那篇文章-->
+                        <div class="entry-meta">
+                            <span class="post-category"><a href="#">{{ post.category.name }}</a></span>
+                            <span class="post-date"><a href="#"><time class="entry-date"
+                                                                      datetime="{{ post.created_time }}">{{ post.created_time }}</time></a></span>
+                            <span class="post-author"><a href="#">{{ post.author }}</a></span>
+                            <span class="comments-link"><a href="#">4 评论</a></span>
+                            <span class="views-count"><a href="#">588 阅读</a></span>
+                        </div>
+                    </header>
+                    <div class="entry-content clearfix">
+                       {{ post.body|safe }}
+                    </div>
+                </article>
+                <section class="comment-area" id="comment-area">
+                    <hr>
+                    <h3>发表评论</h3>
+
+                    <!-- 表单渲染部分 -->
+                    <!-- 表单的action属性用来制定表单提交数据时所指向的地址，规定当提交表单时想何处发送表单数据 -->
+                    <!-- 地址可以为绝对地址也可以为相对地址，当action留空火未设置时，默认制定当前页面所在的地址，并向当前页面提交数据 -->
+                    <form action="{% url 'comments:post_comment' post.pk %}" method="post" class="comment-form">
+                        <!-- 用于验证，每个表单下都需要带这个标签！ -->
+                        {% csrf_token %}
+                        <div class="row">
+                            <!-- form.name(.email; .url; .text)将自动渲染成表单控件 例如<input>控件，前段知识 -->
+                            <!-- form.name(.email; .url; .text).errors将自动渲染表单对应字段的错误（如果有的话），例如email填错了，则会自动渲染后显示错误信息 -->
+                            <div class="col-md-4">
+                                <label for="{{ form.name.id_for_label }}">名字：</label>
+                                {{ form.name }}
+                                {{ form.name.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.email.id_for_label }}">邮箱：</label>
+                                {{ form.email }}
+                                {{ form.email.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.url.id_for_label }}">网址：</label>
+                                {{ form.url }}
+                                {{ form.url.errors }}
+                            </div>
+                            <div class="col-md-12">
+                                <label for="{{ form.text.id_for_label }}">评论：</label>
+                                {{ form.text }}
+                                {{ form.text.errors }}
+                                <button type="submit" class="comment-btn">发表</button>
+                            </div>
+                        </div>    <!-- row -->
+                    </form>
+
+                    <!-- 该文章所有评论部分 -->
+                    <div class="comment-list-panel">
+                        <h3>评论列表，共 <span>4</span> 条评论</h3>
+                        <ul class="comment-list list-unstyled">
+                        {% for comment in comment_list %}
+                            <li class="comment-item">
+                                <a href="#", class="comment_name">{{ comment.name }}</a>
+                                <span class="email">{{ comment.email }}</span>
+                                <time class="created_time">{{ comment.created_time }}</time>
+                                <div class="text">
+                                    {{ comment.text }}
+                                </div>
+                            </li>
+                        {% empty %}
+                            没有评论！
+                        {% endfor %}
+                        </ul>
+                    </div>
+                </section>
+            {% endblock main %}
+            {% block toc %}
+                <div class="widget widget-content">
+                    <h3 class="widget-title">文章目录</h3>
+                    <ul>
+                        {% for directory in post_directory %}
+                            <li>
+                                <a href="{{ directory.get_absolute_url }}">{{ directory.title }}</a>
+                            </li>
+                        {% empty %}
+                            暂无文章！
+                        {% endfor %}
+                    </ul>
+
+                </div>
+            {% endblock toc %}
