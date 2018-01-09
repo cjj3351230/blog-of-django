@@ -2,6 +2,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.urls import reverse
+import markdown
+from django.utils.html import strip_tags	# 用于去掉html文本的全部html标签
 
 # Create your models here.
 class Category(models.Model):	# 一个类对应一个数据库表格，类名即表明
@@ -42,6 +44,22 @@ class Post(models.Model):
 	# 制定CharField的blank=True参数就可以允许空值
 	excerpt = models.CharField(max_length=200, blank=True)
 
+	def save(self, *args, **kwargs):
+		# 如果没有摘要
+		if not self.excerpt:
+			# 首先实例化一个markdown类，用于渲染body的文本
+			md = markdown.Markdown(extesion=[
+				'markdown.extensions.extra',
+				'markdown.extensions.codehilite',
+				])
+			# 先将markdown文本渲染成html文本
+			# strip_tags 去掉html文本的全部html标签
+			# 从文本摘取前54个字符赋给excerpt
+			self.excerpt = strip_tags(md.convert(self.body))[:54]
+
+		# 调用父类的save方法将数据保存到数据库中
+		super(Post, self).save(*args, **kwargs)
+
 	# 这是分类与标签，分类与标签的模型已经定义在上面
 	# 这里把文章对应的数据表与分类、标签对应的数据库表关联了起来，但是关联形式稍微有点不同。
 	# 我们规定一篇文章只能对应一个分类，但是一个分类下也可以有多篇文章，所以我们使用ForeignKey，即一对多的关联关系
@@ -71,3 +89,13 @@ class Post(models.Model):
 	class Meta:
 		# 表示先按创建时间逆序排列，如果时间相同则根据title排列，还可以添加其他参数
 		ordering = ['-created_time', 'title']
+
+	# 该属性用于记录阅读量， PositiveIntegerField类型值只允许为正整数或0
+	views = models.PositiveIntegerField(default=0)
+
+	# 自定义方法，用于自动增加views值
+	# 首先将自身对应的views字段值+1，然后调用save方法更新数据库
+	# 这里的update_fields参数是告诉django只更新数据库中views字段的值，从而提高效率
+	def increase_views(self):
+		self.views += 1
+		self.save(update_fields=['views'])
