@@ -1,8 +1,13 @@
 from django.shortcuts import render, get_object_or_404
-from .models import Post, Category
+from .models import Post, Category, Tag
 from comments.forms import CommentForm # 评论部分。从comments文件的forms.py文件中引入CommentForm类
 import markdown
 from django.views.generic import ListView, DetailView 	# 类视图需要引入
+# 下面两个引入用于美化目录锚
+from django.utils.text import slugify
+from markdown.extensions.toc import TocExtension
+# 下面这个函数用于搜索
+from django.db.models import Q
 
 # 将index视图函数改写为类视图
 class IndexView(ListView):
@@ -194,12 +199,16 @@ class PostDetailView(DetailView):
 	def get_object(self, queryset=None):
 		# 覆写get_object方法的目的是因为需要对post的body值进行markdown渲染
 		post = super(PostDetailView, self).get_object(queryset=None)
-		post.body = markdown.markdown(post.body,
-										extensions=[
-													'markdown.extensions.extra',
-													'markdown.extensions.codehilite',
-													'markdown.extensions.toc',
-													])
+		md = markdown.Markdown(extensions=[
+			'markdown.extensions.extra',
+			'markdown.extensions.codehilite',	# 代码高亮拓展
+			# 这里toc拓展不再是字符串xxx.toc，而是TocExtension实例，在实例化时其slugify参数可以接收一个函数作为参数，这个函数用于处理标题的锚点值
+			# 由于markdown内置的处理方法不能处理中文标题，因此使用django.utils.text中的slugify方法处理中文
+			TocExtension(slugify=slugify),
+			# 美化前代码为'markdown.extensions.toc',	# 自动生成目录的拓展
+		])
+		post.body = md.convert(post.body)
+		post.toc = md.toc
 		return post
 
 	def get_context_data(self, **kwargs):
@@ -227,6 +236,10 @@ class ArchivesView(IndexView):
 	def get_queryset(self):
 		return super(ArchivesView, self).get_queryset().filter(created_time__year=self.kwargs.get('year'), created_time__month=self.kwargs.get('month'))
 
+class TagsView(IndexView):
+	def get_queryset(self):
+		tag = get_object_or_404(Tag, pk=self.kwargs.get('pk'))
+		return super(TagsView, self).get_queryset().filter(tags=tag)
 # 将category视图函数改写为类视图
 # 由于这里CategoryView和IndexView类中属性值相同，因此可以直接继承IndexView类
 '''
@@ -253,3 +266,24 @@ def category(request, pk):
 	# 通过filter过滤出分类为所获取分类的全部文章并按创建时间倒序排列
 	return render(request, 'blog/index.html', context={'post_list':post_list})
 '''
+
+def search(request):
+	# 获取到用户提交的搜索关键词
+	# 用户通过表单get方法提交的数据Django为我们保存在request.GET里，类似于Python字典的对象
+	# 因此使用get方法从字典里驱逐键q对应的值，即搜索关键词
+	# 之所以键叫q，是因为表单中搜索框input的name属性值是q，如果修改了name属性的值（即base.html中的input标签的name属性），键名也要改
+	q = request.GET.get('q')
+	error_msg = ''
+
+	# 如果用户没有输入关键词而提交表单，则在模板中渲染一个错误提示信息
+	if not q:
+		error_msg = '请输入关键词'
+		return render(request, 'blog/index.html', {'error_msg': error_msg})
+
+	# 如果输入信息，则通过filter方法从数据库中过滤出符合条件的所有文章
+	# 两个参数分别表示标题和正文中包含q的文章，i表示不区分大小写
+	# icontains是查询表达式(Field lookups)，用法是在需要筛选的属性后面跟上两个下划线
+	# 这里Q对象用于包装查询表达式，用于提供复杂的查询逻辑，|符号表示或逻辑
+	post_list = Post.objects.filter(Q(title__icontains=q) | Q(body__icontains=q))
+	return render(request, 'blog/index.html', {'error_msg': error_msg,
+												'post_list': post_list})

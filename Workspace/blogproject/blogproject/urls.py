@@ -15,9 +15,12 @@ Including another URLconf
 """
 from django.conf.urls import url, include
 from django.contrib import admin
+from blog.feeds import AllPostsRssFeed # RSS订阅方法
 
 urlpatterns = [
 	url(r'^admin/', admin.site.urls),
 	url(r'', include('blog.urls')), # 利用include函数，把blog中urls.py文件包含进来，则实际正则匹配为r''+r'^$'
 	url(r'', include('comments.urls')),		# 评论部分
+	url(r'^all/rss/$', AllPostsRssFeed(), name='rss'),
+	url(r'^search/', include('haystack.urls')), # 使用haystack搜索引擎
 ]

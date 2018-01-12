@@ -37,8 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'haystack', # django的第三方全文搜索
     'blog', # 注册blog应用
     'comments', # 注册comments应用
+    
 ]
 
 MIDDLEWARE = [
@@ -122,3 +124,17 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# 这里配置haystack搜索
+# 这里ENGINE指定了django haystack使用的搜索引擎，blog.whoosh_cn_backend.WhooshEngine引擎需要创建
+# PATH指定索引文件需要存放的位置，这里设置在项目根目录BASE_DIR下的whoosh_index文件夹
+# HAYSTACK_SEARCH_RESULTS_PER_PAGE用于设置结果分页，这里为10项一页
+# HAYSTACK_SIGNAL_PROCESSOR指定什么时候更新索引，之后的字符串表示每当有文章更新时就更新索引
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.whoosh_backend.WhooshEngine',
+        'PATH': os.path.join(BASE_DIR, 'whoosh_index'),
+    },
+}
+HAYSTACK_SEARCH_RESULTS_PER_PAGE = 10
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'

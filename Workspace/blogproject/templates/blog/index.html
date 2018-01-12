@@ -1,6 +1,10 @@
             {% extends 'base.html' %}
             # <!-- 模板继承，这样可以把base.html中代码继承过来 -->
             {% block main %}
+                {% if error_msg %}
+                    <p>{{ error_msg }}</p>
+                {% endif %}
+                
                 {% for post in post_list %}
                 <!-- 这里使用模板变量来显示post的属性值，如post.pk（primary key，即post对应于数据库中记录的id值） -->
                     <article class="post post-{{ post.pk }}">
@@ -107,16 +111,32 @@
                 -->
 
                 {% if is_paginated %}   <!-- is_paginated表示是否已分页，只有当分页后页面超过两页时才算已分页 -->
-                <div class='pagination-simple'; style="text-align: center">
+                <div class='pagination-center' style="text-align: center">
                     <!-- 如果当前页还有上一页，显示一个上一页的按钮 -->
-                    {% if page_obj.has_previous %}  <!-- page_obj表示当前请求页面分页对象，has_previous表示是否有上一页，相反为has_next -->
-                        <a href="?page={{ page_obj.previous_page_number }}"><strong>上一页</strong></a>
+                    <!--   page_obj表示当前请求页面分页对象，has_previous表示是否有上一页，相反为has_next -->
+                    {% if first %}
+                        <a href="?page=1 }}">1</a>
                     {% endif %}
                     <!-- 显示当前页面信息 -->
-                    <span class='current'>第 {{ page_obj.number }} 页 / 共 {{ paginator.num_pages }} 页</span>
-                    <!-- 如果当前页还有下一页，显示一个下一页的按钮 -->
-                    {% if page_obj.has_next %}
-                        <a href="?page={{ page_obj.next_page_number }}" ><strong>下一页</strong></a>
+                    {% if left %}
+                        {% if left_has_more %}
+                            <span>...</span>
+                        {% endif %}
+                        {% for i in left %}
+                            <a href="?page={{ i }}">{{ i }}</a>
+                        {% endfor %}
+                    {% endif %}
+                    <a href="?page={{ page_obj.number }}" style="color: red">{{ page_obj.number }}</a>
+                    {% if right %}
+                        {% for i in right %}
+                            <a href="?page={{ i }}">{{ i }}</a>
+                        {% endfor %}
+                        {% if right_has_more %}
+                            <span>...</span>
+                        {% endif %}
+                    {% endif %}
+                    {% if last %}
+                        <a href="?page={{ paginator.num_pages }}">{{ paginator.num_pages }}</a>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -127,5 +147,4 @@
                     <a href="#">下一页</a>
                 </div>
                 -->
-               
             {% endblock main %}
